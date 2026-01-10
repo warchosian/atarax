@@ -423,6 +423,65 @@ Un `BREAKING CHANGE:` ou `!` après le type/scope résulte en une version MAJEUR
 5.  **Vérification Systématique du Build**: `python -m zipfile -l dist/*.whl`
 6.  **Pousser les changements**: `git push --follow-tags`
 
+## Conventions Git (OBLIGATOIRE)
+
+### 🚨 RÈGLE - Branche Principale
+
+**Ce projet utilise OBLIGATOIREMENT la branche `main` comme branche principale, et NON `master`.**
+
+Cette règle s'applique à :
+- ✅ Tous les nouveaux repositories
+- ✅ Toutes les opérations git (push, pull, merge, etc.)
+- ✅ Toutes les configurations CI/CD
+- ✅ Toutes les documentations et instructions
+
+### Configuration du Repository
+
+Lors de la création d'un nouveau repository ou du renommage de la branche principale :
+
+```bash
+# Renommer la branche master en main (si elle existe)
+git branch -m master main
+
+# Pousser la branche main sur le remote
+git push -u origin main --follow-tags
+
+# Définir main comme branche par défaut (sur GitLab/GitHub)
+# GitLab: Settings > Repository > Default Branch > main
+# GitHub: Settings > Branches > Default branch > main
+```
+
+### Commandes Git Standards
+
+Toutes les commandes git doivent utiliser `main` :
+
+```bash
+# Pousser vers main
+git push origin main
+
+# Merger une branche vers main
+git checkout main
+git merge feature-branch
+
+# Rebaser sur main
+git rebase main
+
+# Créer une branche depuis main
+git checkout -b nouvelle-branche main
+```
+
+### ❌ Anti-Patterns Interdits
+
+```bash
+# ❌ INTERDIT : Utiliser master
+git push origin master
+git checkout master
+
+# ✅ CORRECT : Utiliser main
+git push origin main
+git checkout main
+```
+
 ## Vérification de l'Intégrité du Build (`.whl`)
 
 Il est crucial de s'assurer que tous les fichiers nécessaires sont inclus dans le build.
