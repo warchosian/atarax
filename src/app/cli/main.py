@@ -1,6 +1,7 @@
 import argparse
 import sys
 from app.favorites.commands.favorites_to_md import favorites_to_md_command
+from app.favorites.commands.favorites_organize import favorites_organize_command
 
 def main():
     parser = argparse.ArgumentParser(
@@ -67,6 +68,50 @@ def main():
         output_path=args.output_path,
         config_path=args.config_path,
         output_type=args.output_type,
+        verbose=args.verbose
+    ))
+
+    # Favorites organize command
+    favorites_organize_parser = subparsers.add_parser(
+        "favorites-organize",
+        help="Reorganize browser bookmarks into a clean semantic structure.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog="Hiérarchie de configuration (priorité décroissante):\n"
+               "  1. Arguments CLI (--output, etc.)\n"
+               "  2. Fichier YAML (--config)\n"
+               "  3. Variables d'environnement (not yet supported for this command)\n"
+               "  4. Valeurs par défaut\n\n"
+               "Exemples:\n"
+               "  # Réorganiser les favoris\n"
+               "  atarax favorites-organize examples\\favoris_10_01_2026.html\n\n"
+               "  # Spécifier un fichier de sortie\n"
+               "  atarax favorites-organize examples\\favoris_10_01_2026.html -o reorganized.html\n\n"
+               "  # Afficher l'aide complète\n"
+               "  atarax favorites-organize --help"
+    )
+    favorites_organize_parser.add_argument(
+        "input_file",
+        help="Input bookmarks HTML file"
+    )
+    favorites_organize_parser.add_argument(
+        "-o", "--output",
+        dest="output_file",
+        help="Output bookmarks HTML file (default: <input>-reorganized.html)"
+    )
+    favorites_organize_parser.add_argument(
+        "-c", "--config",
+        dest="config_path",
+        help="Path to a YAML configuration file (not yet implemented)."
+    )
+    favorites_organize_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose output."
+    )
+    favorites_organize_parser.set_defaults(func=lambda args: favorites_organize_command(
+        input_file=args.input_file,
+        output_file=args.output_file,
+        config_path=args.config_path,
         verbose=args.verbose
     ))
 

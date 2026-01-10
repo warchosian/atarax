@@ -2,10 +2,15 @@
 import re
 import sys
 import os
+import logging
 from collections import defaultdict
 from urllib.parse import urlparse
+from typing import Optional
 import html
 import argparse
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # -----------------------------
 # 1. CONFIGURATION : Mapping sémantique
@@ -146,81 +151,94 @@ def classify_url(url, title):
         return ["AI & Technology", "Computer Science & Development"]
     return ["Culture & Knowledge", "Humanities"]
 
-def main():
-    parser = argparse.ArgumentParser(description="Reorganize browser bookmarks into a clean English structure.")
-    parser.add_argument("input", help="Input bookmarks HTML file")
-    parser.add_argument("-o", "--output", help="Output bookmarks HTML file (default: <input>-reorganized.html)")
-    args = parser.parse_args()
+def favorites_organize_command(
+    input_file: str,
+    output_file: Optional[str] = None,
+    config_path: Optional[str] = None,
+    verbose: bool = False
+) -> int:
+    """
+    Reorganize browser bookmarks into a clean semantic structure.
 
-    input_file = args.input
+    Hiérarchie de configuration (du plus au moins prioritaire):
+    1. Arguments CLI (input_file, output_file)
+    2. Fichier YAML (config_path) - not yet implemented
+    3. Variables d'environnement - not yet implemented
+    4. Valeurs par défaut
+    """
+    if verbose:
+        logger.info(f"Reorganizing bookmarks from: {input_file}")
+
     if not os.path.isfile(input_file):
-        print(f"❌ Error: Input file '{input_file}' does not exist.", file=sys.stderr)
-        sys.exit(1)
+        logger.error(f"Input file '{input_file}' does not exist.")
+        return 1
 
-    output_file = args.output
     if not output_file:
         base, ext = os.path.splitext(input_file)
         output_file = f"{base}-reorganized.html"
+        if verbose:
+            logger.info(f"No output file specified. Defaulting to: {output_file}")
 
-    with open(input_file, "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
+    try:
+        with open(input_file, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
 
-    folder_pattern = re.compile(r'<DT><H3[^>]*>(.*?)</H3>')
-    link_pattern = re.compile(r'<DT><A\s+HREF="([^"]*)"[^>]*?>(.*?)</A>', re.DOTALL)
+        folder_pattern = re.compile(r'<DT><H3[^>]*>(.*?)</H3>')
+        link_pattern = re.compile(r'<DT><A\s+HREF="([^"]*)"[^>]*?>(.*?)</A>', re.DOTALL)
 
-    lines = content.splitlines()
-    current_path = []
-    all_links = []
+        lines = content.splitlines()
+        current_path = []
+        all_links = []
 
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
 
-        if '<DT><H3' in line:
-            match = re.search(r'<DT><H3[^>]*?>(.*?)</H3>', line)
-            if match:
-                folder_name = html.unescape(match.group(1))
-                if folder_name not in BLACKLISTED_FOLDERS:
-                    current_path.append(folder_name)
-        elif '</DL>' in line:
-            if current_path:
-                current_path.pop()
-        elif '<DT><A HREF=' in line:
-            link_match = re.search(r'<DT><A\s+HREF="([^"]*)"(?: ADD_DATE="([^"]*)")?(?: ICON="([^"]*)")?[^>]*>(.*?)</A>', line, re.DOTALL)
-            if link_match:
-                url = link_match.group(1)
-                add_date = link_match.group(2) or ""
-                icon = link_match.group(3) or ""
-                raw_title = link_match.group(4) or ""
-                title = normalize_title(raw_title) or extract_title_from_url(url)
-                all_links.append({
-                    "url": url,
-                    "title": title,
-                    "add_date": add_date,
-                    "icon": icon,
-                    "source_path": list(current_path)
-                })
+            if '<DT><H3' in line:
+                match = re.search(r'<DT><H3[^>]*?>(.*?)</H3>', line)
+                if match:
+                    folder_name = html.unescape(match.group(1))
+                    if folder_name not in BLACKLISTED_FOLDERS:
+                        current_path.append(folder_name)
+            elif '</DL>' in line:
+                if current_path:
+                    current_path.pop()
+            elif '<DT><A HREF=' in line:
+                link_match = re.search(r'<DT><A\s+HREF="([^"]*)"(?: ADD_DATE="([^"]*)")?(?: ICON="([^"]*)")?[^>]*>(.*?)</A>', line, re.DOTALL)
+                if link_match:
+                    url = link_match.group(1)
+                    add_date = link_match.group(2) or ""
+                    icon = link_match.group(3) or ""
+                    raw_title = link_match.group(4) or ""
+                    title = normalize_title(raw_title) or extract_title_from_url(url)
+                    all_links.append({
+                        "url": url,
+                        "title": title,
+                        "add_date": add_date,
+                        "icon": icon,
+                        "source_path": list(current_path)
+                    })
 
-    seen_urls = set()
-    unique_links = []
-    for link in all_links:
-        if link["url"] not in seen_urls:
-            seen_urls.add(link["url"])
-            unique_links.append(link)
+        seen_urls = set()
+        unique_links = []
+        for link in all_links:
+            if link["url"] not in seen_urls:
+                seen_urls.add(link["url"])
+                unique_links.append(link)
 
-    root = BookmarkNode("Bookmarks Bar")
+        root = BookmarkNode("Bookmarks Bar")
 
-    for link in unique_links:
-        target_path = classify_url(link["url"], link["title"])
-        folder = root.find_or_create_path(target_path)
-        leaf = BookmarkNode(link["title"], is_folder=False)
-        leaf.url = link["url"]
-        leaf.add_date = link["add_date"]
-        leaf.icon = link["icon"]
-        folder.add_child(leaf)
+        for link in unique_links:
+            target_path = classify_url(link["url"], link["title"])
+            folder = root.find_or_create_path(target_path)
+            leaf = BookmarkNode(link["title"], is_folder=False)
+            leaf.url = link["url"]
+            leaf.add_date = link["add_date"]
+            leaf.icon = link["icon"]
+            folder.add_child(leaf)
 
-    header = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+        header = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <!-- This is an automatically generated file.
      It will be read and overwritten.
      DO NOT EDIT! -->
@@ -230,15 +248,43 @@ def main():
 
 <DL><p>
 """
-    footer = "</DL><p>\n"
+        footer = "</DL><p>\n"
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(header)
-        for child in root.children:
-            f.write(child.to_html())
-        f.write(footer)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(header)
+            for child in root.children:
+                f.write(child.to_html())
+            f.write(footer)
 
-    print(f"✅ Bookmarks reorganized and saved to: {output_file}")
+        if verbose:
+            logger.info(f"Bookmarks reorganized and saved to: {output_file}")
+
+        # Display only the output file path
+        print(output_file)
+
+        return 0
+
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        return 1
+    except Exception as e:
+        logger.error(f"An error occurred: {e}", exc_info=True)
+        return 1
+
+def main():
+    """Main entry point for standalone execution."""
+    parser = argparse.ArgumentParser(description="Reorganize browser bookmarks into a clean English structure.")
+    parser.add_argument("input", help="Input bookmarks HTML file")
+    parser.add_argument("-o", "--output", help="Output bookmarks HTML file (default: <input>-reorganized.html)")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    args = parser.parse_args()
+
+    sys.exit(favorites_organize_command(
+        input_file=args.input,
+        output_file=args.output,
+        config_path=None,
+        verbose=args.verbose
+    ))
 
 if __name__ == "__main__":
     main()
