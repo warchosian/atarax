@@ -1,0 +1,82 @@
+import argparse
+import sys
+from app.favorites.commands.favorites_to_md import favorites_to_md_command
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="atarax",
+        description="Atarax CLI - Main entry point for various modules.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+
+    # Subparsers for different modules
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Favorites favorites-to-md command
+    favorites_to_md_parser = subparsers.add_parser(
+        "favorites-to-md",
+        help="Convert a Chrome favorites HTML file to various Markdown formats.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog="Hiérarchie de configuration (priorité décroissante):\n"
+               "  1. Arguments CLI (--type, --output, etc.)\n"
+               "  2. Fichier YAML (--config)\n"
+               "  3. Variables d'environnement (not yet supported for this command)\n"
+               "  4. Valeurs par défaut\n\n"
+               "Exemples:\n"
+               "  # Convertir en arborescence textuelle avec box-drawing characters\n"
+               "  atarax favorites-to-md examples\favoris_10_01_2026.html --type monospace -o examples\favoris_10_01_2026.monospace.md\n\n"
+               "  # Convertir en PlantUML Tree\n"
+               "  atarax favorites-to-md examples\favoris_10_01_2026.html --type tree -o examples\favoris_10_01_2026.tree.puml.md\n\n"
+               "  # Afficher l'aide complète\n"
+               "  atarax favorites-to-md --help"
+    )
+    favorites_to_md_parser.add_argument(
+        "file_path",
+        help="Path to the Chrome favorites HTML file (e.g., examples/favoris_10_01_2026.html)"
+    )
+    favorites_to_md_parser.add_argument(
+        "-o", "--output",
+        dest="output_path",
+        help="Optional path to save the generated Markdown file. Defaults to <input_file_name>.<type_extension>.md."
+    )
+    favorites_to_md_parser.add_argument(
+        "-t", "--type",
+        dest="output_type",
+        choices=["monospace", "tree", "mindmap", "mermaid", "stars", "fillers"],
+        default="mindmap",
+        help="Specify the output format type:\n"
+             "  monospace: Textual tree format with box-drawing characters (output will be .monospace.md)\n" 
+             "  tree: PlantUML Tree Diagram (output will be .tree.puml.md)\n" 
+             "  mindmap: PlantUML Mindmap Diagram (output will be .mindmap.puml.md)\n" 
+             "  mermaid: Mermaid Mindmap Diagram (output will be .mermaid.md)\n" 
+             "  stars: Textual tree format with stars indicating depth (output will be .stars.md)\n" 
+             "  fillers: Textual tree format with '+' characters indicating depth (output will be .fillers.md)"
+    )
+    favorites_to_md_parser.add_argument(
+        "-c", "--config",
+        dest="config_path",
+        help="Path to a YAML configuration file (not yet implemented)."
+    )
+    favorites_to_md_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose output."
+    )
+    favorites_to_md_parser.set_defaults(func=lambda args: favorites_to_md_command(
+        file_path=args.file_path,
+        output_path=args.output_path,
+        config_path=args.config_path,
+        output_type=args.output_type,
+        verbose=args.verbose
+    ))
+
+    args = parser.parse_args()
+
+    if hasattr(args, "func"):
+        sys.exit(args.func(args))
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,25 @@
+[project]
+name = "atarax"
+version = "0.1.0"
+description = "Personnal Holistic"
+authors = [
+    {name = "herve.marchal",email = "herve.marchal@developpement-durable.gouv.fr"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4 (>=4.14.3,<5.0.0)",
+    "lxml (>=4.9.0,<5.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "app", from = "src"}]
+
+[tool.poetry.scripts]
+atarax = "app.cli.main:main"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

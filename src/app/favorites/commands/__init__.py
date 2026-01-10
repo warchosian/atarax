@@ -1,0 +1,1 @@
+# app/favorites/commands/__init__.py
