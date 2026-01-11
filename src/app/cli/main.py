@@ -2,6 +2,7 @@ import argparse
 import sys
 from app.favorites.commands.favorites_to_md import favorites_to_md_command
 from app.favorites.commands.favorites_organize import favorites_organize_command
+from app.favorites.commands.favorites_deduplicate import favorites_deduplicate_command
 
 def main():
     parser = argparse.ArgumentParser(
@@ -112,6 +113,65 @@ def main():
         input_file=args.input_file,
         output_file=args.output_file,
         config_path=args.config_path,
+        verbose=args.verbose
+    ))
+
+    # Favorites deduplicate command
+    favorites_deduplicate_parser = subparsers.add_parser(
+        "favorites-deduplicate",
+        help="Detect and remove duplicate bookmarks.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog="Hiérarchie de configuration (priorité décroissante):\n"
+               "  1. Arguments CLI (--output, --dry-run, --similarity-threshold)\n"
+               "  2. Fichier YAML (--config)\n"
+               "  3. Variables d'environnement (not yet supported for this command)\n"
+               "  4. Valeurs par défaut\n\n"
+               "Exemples:\n"
+               "  # Voir les doublons sans modification (dry-run)\n"
+               "  atarax favorites-deduplicate examples\\favoris_10_01_2026.html --dry-run -v\n\n"
+               "  # Supprimer les doublons\n"
+               "  atarax favorites-deduplicate examples\\favoris_10_01_2026.html\n\n"
+               "  # Ajuster le seuil de similarité\n"
+               "  atarax favorites-deduplicate examples\\favoris_10_01_2026.html --similarity-threshold 0.95\n\n"
+               "  # Afficher l'aide complète\n"
+               "  atarax favorites-deduplicate --help"
+    )
+    favorites_deduplicate_parser.add_argument(
+        "input_file",
+        help="Input bookmarks HTML file"
+    )
+    favorites_deduplicate_parser.add_argument(
+        "-o", "--output",
+        dest="output_file",
+        help="Output bookmarks HTML file (default: <input>-deduplicated.html)"
+    )
+    favorites_deduplicate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show duplicates without creating output file"
+    )
+    favorites_deduplicate_parser.add_argument(
+        "--similarity-threshold",
+        type=float,
+        default=0.9,
+        help="Similarity threshold for title matching (0.0-1.0, default: 0.9)"
+    )
+    favorites_deduplicate_parser.add_argument(
+        "-c", "--config",
+        dest="config_path",
+        help="Path to a YAML configuration file (not yet implemented)."
+    )
+    favorites_deduplicate_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose output."
+    )
+    favorites_deduplicate_parser.set_defaults(func=lambda args: favorites_deduplicate_command(
+        input_file=args.input_file,
+        output_file=args.output_file,
+        config_path=args.config_path,
+        dry_run=args.dry_run,
+        similarity_threshold=args.similarity_threshold,
         verbose=args.verbose
     ))
 
